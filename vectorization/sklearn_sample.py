@@ -1,7 +1,5 @@
-import nltk 
 import cv2
 import os
-from nltk.corpus import stopwords
 
 try:
     from PIL import Image
@@ -9,6 +7,8 @@ except ImportError:
     import Image
 import pytesseract
 from wand.image import Image
+from nltk.tokenize import sent_tokenize, word_tokenize
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 #Extract text from a pdf file and tokenize the words present.
@@ -28,27 +28,20 @@ with Image(filename=file_name, resolution=300) as Sourcefilename:
 
 text = ''
 for p in pngnames:
-	text += pytesseract.image_to_string(cv2.imread(p)).encode('utf-8')
+	text += pytesseract.image_to_string(cv2.imread(p))
 
+#sklearn CountVectorizer
+vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, max_features = 5000) 
+train_data_features = vectorizer.fit_transform(sent_tokenize(text))
 
-tokens = [t for t in text.split()] 
-freq = nltk.FreqDist(tokens) 
-clean_tokens = tokens[:] 
-sr = stopwords.words('english')
-for token in tokens:
-    if token in stopwords.words('english'):
-        clean_tokens.remove(token)
+f = open("files/"+file_name+"-sklearn.txt","w+")
 
-#find count of frequently used tokens and write it to a file
-freq = nltk.FreqDist(clean_tokens)
-f= open("files/"+file_name+"_tokenization.txt","w+")
-f.write("**************************Tokens**************************\n\n")
-f.write(str(freq.items()))
+for sentence in sent_tokenize(text):
+	vector = vectorizer.transform([sentence]).toarray()
+	f.write(str(sentence.encode('utf-8')))
+	f.write(str(vector))
+	f.write("\n\n\n")
 f.close()
-#plot a gaph that shows the count of frequently used tokens
-freq.plot(30,cumulative=False)
 
-#remove the images created for extraction
 for im in pngnames:
     os.remove(im)
-
